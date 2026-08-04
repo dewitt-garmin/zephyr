@@ -303,12 +303,6 @@ FUNC_NORETURN void z_arc_switch_to_main_no_multithreading(k_thread_entry_t main_
 	char *main_stack =
 		(K_THREAD_STACK_BUFFER(z_main_stack) + K_THREAD_STACK_SIZEOF(z_main_stack));
 
-#if defined(__CCAC__)
-	/* See https://github.com/zephyrproject-rtos/zephyr/issues/114503 */
-	BUILD_ASSERT(
-		!IS_ENABLED(CONFIG_THREAD_LOCAL_STORAGE),
-		"Thread local storage is not supported with multithreading disabled on ARC MWDT.");
-#else
 #if defined(CONFIG_THREAD_LOCAL_STORAGE)
 	/* Update the thread pointer register. With multithreading disabled
 	 * there is no context switch to set it, so it must be
@@ -320,6 +314,7 @@ FUNC_NORETURN void z_arc_switch_to_main_no_multithreading(k_thread_entry_t main_
 	tls_size = arch_tls_stack_setup(NULL, main_stack);
 	main_stack -= tls_size;
 
+#if !defined(__CCAC__)
 /* GCC uses tls pointer cached in register */
 #ifdef CONFIG_ISA_ARCV2
 	/* __ARC_TLS_REGNO__ is used for thread pointer for ARCv2 */
@@ -328,10 +323,10 @@ FUNC_NORETURN void z_arc_switch_to_main_no_multithreading(k_thread_entry_t main_
 	/* R30 is used for thread pointer for ARCv3 */
 	__asm__ volatile("mov r30, %0" : : "r"(main_stack));
 #endif /* CONFIG_ISA_ARCV2 */
+#endif /* !defined(__CCAC__) */
 
 	main_stack = (char *)ROUND_DOWN(main_stack, ARCH_STACK_PTR_ALIGN);
 #endif /* defined(CONFIG_THREAD_LOCAL_STORAGE) */
-#endif /* defined(__CCAC__) */
 
 	arch_irq_unlock(_ARC_V2_INIT_IRQ_LOCK_KEY);
 

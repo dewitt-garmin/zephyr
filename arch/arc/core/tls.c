@@ -10,11 +10,12 @@
 #include <zephyr/sys/util.h>
 
 #ifdef __CCAC__
-BUILD_ASSERT(IS_ENABLED(CONFIG_MULTITHREADING),
-	     "Thread local storage requires multithreading with ARC MWDT.");
-
 extern char _arcmwdt_tls_start[];
 extern char _arcmwdt_tls_size[];
+
+#if !defined(CONFIG_MULTITHREADING)
+uintptr_t z_arc_tls_ptr;
+#endif
 
 size_t arch_tls_stack_setup(struct k_thread *new_thread, char *stack_ptr)
 {
@@ -24,14 +25,23 @@ size_t arch_tls_stack_setup(struct k_thread *new_thread, char *stack_ptr)
 	stack_ptr -= tls_size_aligned;
 	memcpy(stack_ptr, _arcmwdt_tls_start, tls_size);
 
+#if defined(CONFIG_MULTITHREADING)
 	new_thread->tls = POINTER_TO_UINT(stack_ptr);
+#else
+	z_arc_tls_ptr = (uintptr_t)stack_ptr;
+	ARG_UNUSED(new_thread);
+#endif
 
 	return tls_size_aligned;
 }
 
 void *_Preserve_flags _mwget_tls(void)
 {
+#if defined(CONFIG_MULTITHREADING)
 	return (void *)(_current->tls);
+#else
+	return (void *)(z_arc_tls_ptr);
+#endif
 }
 
 #else

@@ -118,17 +118,12 @@ ZTEST(no_multithreading, test_cpu_idle)
 				  "Unexpected time passed: %d ms", (int)diff);
 }
 
-/* TODO: Remove checks once TLS is supported on all architectures and compilers
- * See https://github.com/zephyrproject-rtos/zephyr/issues/114503
- */
-#if !defined(__CCAC__)
 ZTEST(no_multithreading, test_tls)
 {
 	static volatile Z_THREAD_LOCAL int i = 42;
 
 	zassert_equal(i, 42, "TLS variable was not initialized");
 }
-#endif
 
 #define IDX_PRE_KERNEL_1 0
 #define IDX_PRE_KERNEL_2 1
